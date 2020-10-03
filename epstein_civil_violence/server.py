@@ -47,7 +47,6 @@ model_params = dict(
     cop_vision=7,
     legitimacy=0.8,
     max_jail_term=1000,
-    initialUnEmployment = 0.1
 )
 
 canvas_element = CanvasGrid(citizen_cop_portrayal, 40, 40, 480, 480)
