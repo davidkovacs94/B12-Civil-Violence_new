@@ -9,7 +9,7 @@ from .agent import Cop, Citizen
 class EpsteinCivilViolence(Model):
     """
     Model 1 from "Modeling civil violence: An agent-based computational
-    approach," by Joshua Epstein.
+    approach," by Joshua Epstein
     http://www.pnas.org/content/99/suppl_3/7243.full
     Attributes:
         height: grid height
@@ -30,6 +30,7 @@ class EpsteinCivilViolence(Model):
         movement: binary, whether agents try to move at step end
         max_iters: model may not have a natural stopping point, so we set a
             max.
+
     """
 
     def __init__(
@@ -45,8 +46,17 @@ class EpsteinCivilViolence(Model):
         active_threshold=0.1,
         arrest_prob_constant=2.3,
         movement=True,
+        initial_unemployment_rate = 0.1,
+        corruption_level = 0.1,
+        honest_level = 0.6,
+        corruption_transmission_prob = 0.06,
+        honest_transmission_prob = 0.02,
+        max_corruption_saturation = 0.45,
+        max_honest_saturation = 0.35,
+        max_unemployed_saturation = 0.45,
         max_iters=1000,
     ):
+
         super().__init__()
         self.height = height
         self.width = width
@@ -59,14 +69,28 @@ class EpsteinCivilViolence(Model):
         self.active_threshold = active_threshold
         self.arrest_prob_constant = arrest_prob_constant
         self.movement = movement
+        self.initial_unemployment_rate = initial_unemployment_rate
+        self.corruption_level = corruption_level
+        self.honest_level = honest_level,
+        self.susceptible_level = 1 - (corruption_level + honest_level)
         self.max_iters = max_iters
         self.iteration = 0
         self.schedule = RandomActivation(self)
+        self.corruption_transmission_prob = corruption_transmission_prob
+        self.honest_transmission_prob = honest_transmission_prob
+        self.max_corruption_saturation = max_corruption_saturation
+        self.max_honest_saturation = max_honest_saturation
+        self.max_unemployed_saturation = max_unemployed_saturation
+ 
         self.grid = Grid(height, width, torus=True)
         model_reporters = {
             "Quiescent": lambda m: self.count_type_citizens(m, "Quiescent"),
             "Active": lambda m: self.count_type_citizens(m, "Active"),
             "Jailed": lambda m: self.count_jailed(m),
+            "Employed" : lambda m: self.count_employed(m),
+            "Corrupted" : lambda m: self.count_moral_type_citizens(m,"Corrupted"),
+            "Honest" : lambda m: self.count_moral_type_citizens(m,"Honest"),
+            "Susceptible" : lambda m: self.count_moral_type_citizens(m,"Susceptible")
         }
         agent_reporters = {
             "x": lambda a: a.pos[0],
@@ -75,6 +99,8 @@ class EpsteinCivilViolence(Model):
             "jail_sentence": lambda a: getattr(a, "jail_sentence", None),
             "condition": lambda a: getattr(a, "condition", None),
             "arrest_probability": lambda a: getattr(a, "arrest_probability", None),
+            "is_employed" : lambda a: getattr(a, "is_employed", None),
+            "moral_condition": lambda a: getattr(a, "moral_condition", None),
         }
         self.datacollector = DataCollector(
             model_reporters=model_reporters, agent_reporters=agent_reporters
@@ -82,6 +108,14 @@ class EpsteinCivilViolence(Model):
         unique_id = 0
         if self.cop_density + self.citizen_density > 1:
             raise ValueError("Cop density + citizen density must be less than 1")
+            
+            
+        if self.initial_unemployment_rate  > 1:
+            raise ValueError("initial_unemployment_rate must be between [0,1] ")
+            
+        if self.corruption_level + self.susceptible_level  > 1:
+            raise ValueError("moral level must be less than 1 ")
+
         for (contents, x, y) in self.grid.coord_iter():
             if self.random.random() < self.cop_density:
                 cop = Cop(unique_id, self, (x, y), vision=self.cop_vision)
@@ -89,15 +123,33 @@ class EpsteinCivilViolence(Model):
                 self.grid[y][x] = cop
                 self.schedule.add(cop)
             elif self.random.random() < (self.cop_density + self.citizen_density):
+                moral_state = "Honest"
+                is_employed = 1
+                if self.random.random() < self.initial_unemployment_rate:
+                    is_employed = 0
+                p = self.random.random()
+                if p < self.corruption_level: 
+                   moral_state = "Corrupted"
+                elif p < self.corruption_level + self.susceptible_level:                   
+                   moral_state = "Susceptible"
+                   
                 citizen = Citizen(
                     unique_id,
                     self,
                     (x, y),
-                    hardship=self.random.random(),
-                    regime_legitimacy=self.legitimacy,
+                    #updated hardship formula: if agent is employed hardship is alleviated
+                    hardship=self.random.random()-(is_employed*self.random.uniform(0.05,0.15)),
+                    legitimacy=self.legitimacy,
+                    #updated regime legitimacy, so inital corruption rate is taken into consideration
+                    regime_legitimacy=self.legitimacy,#-self.corruption_level,
                     risk_aversion=self.random.random(),
-                    threshold=self.active_threshold,
+                    active_threshold=self.active_threshold,
+                    #updated threshold: if agent is employed threshold for rebelling is raised
+                    threshold=self.active_threshold+(is_employed*self.random.uniform(0.05,0.15)),
                     vision=self.citizen_vision,
+                    is_employed=is_employed,
+                    moral_state = moral_state,
+                    corruption_transmission_prob = self.corruption_transmission_prob,
                 )
                 unique_id += 1
                 self.grid[y][x] = citizen
@@ -118,7 +170,7 @@ class EpsteinCivilViolence(Model):
             self.running = False
 
     @staticmethod
-    def count_type_citizens(model, condition, exclude_jailed=True):
+    def count_type_citizens(model, condition, exclude_jailed=False):
         """
         Helper method to count agents by Quiescent/Active.
         """
@@ -131,6 +183,71 @@ class EpsteinCivilViolence(Model):
             if agent.condition == condition:
                 count += 1
         return count
+    
+    @staticmethod
+    def get_unemployed_saturation(model, exclude_jailed=False):
+        """
+        Helper method to count agents by Quiescent/Active.
+        """
+        unempl_count = 0
+        total_count = 0
+        for agent in model.schedule.agents:
+            if agent.breed == "cop":
+                continue
+            if exclude_jailed and agent.jail_sentence:
+                continue
+            if agent.is_employed == 0:
+                unempl_count += 1
+            total_count +=1
+        return unempl_count/total_count
+
+    
+    @staticmethod
+    def get_corrupted_saturation(model, exclude_jailed=False):
+        """
+        Helper method to count agents by Quiescent/Active.
+        """
+        corr_count = 0
+        total_count = 0
+        for agent in model.schedule.agents:
+            if agent.breed == "cop":
+                continue
+            if exclude_jailed and agent.jail_sentence:
+                continue
+            if agent.moral_state == "Corrupted":
+                corr_count += 1
+            total_count +=1
+        return corr_count/total_count
+    @staticmethod
+    def get_honest_saturation(model, exclude_jailed=False):
+        """
+        Helper method to count agents by Quiescent/Active.
+        """
+        honest_count = 0
+        total_count = 0
+        for agent in model.schedule.agents:
+            if agent.breed == "cop":
+                continue
+            if exclude_jailed and agent.jail_sentence:
+                continue
+            if agent.moral_state == "Honest":
+                honest_count += 1
+            total_count +=1
+        return honest_count/total_count
+    @staticmethod
+    def count_moral_type_citizens(model, moral_condition, exclude_jailed=False):
+        """
+        Helper method to count agents by Quiescent/Active.
+        """
+        count = 0
+        for agent in model.schedule.agents:
+            if agent.breed == "cop":
+                continue
+            if exclude_jailed and agent.jail_sentence:
+                continue
+            if agent.moral_state == moral_condition:
+                count += 1
+        return count
 
     @staticmethod
     def count_jailed(model):
@@ -140,5 +257,29 @@ class EpsteinCivilViolence(Model):
         count = 0
         for agent in model.schedule.agents:
             if agent.breed == "citizen" and agent.jail_sentence:
+                count += 1
+        return count
+    @staticmethod
+    def count_employed(model):
+        """
+        Helper method to count employed agents.
+        """
+        count = 0
+        for agent in model.schedule.agents:
+            if agent.breed == "cop":
+                continue
+            if agent.is_employed == 1:
+                count += 1
+        return count
+    @staticmethod
+    def count_corrupted(model):
+        """
+        Helper method to count corrupted agents.
+        """
+        count = 0
+        for agent in model.schedule.agents:
+            if agent.breed == "cop":
+                continue
+            if agent.is_corrupted == 1:
                 count += 1
         return count

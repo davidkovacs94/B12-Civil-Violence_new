@@ -7,6 +7,7 @@ class Citizen(Agent):
     """
     A member of the general population, may or may not be in active rebellion.
     Summary of rule: If grievance - risk > threshold, rebel.
+
     Attributes:
         unique_id: unique int
         x, y: Grid coordinates
@@ -25,6 +26,7 @@ class Citizen(Agent):
             how aggrieved is agent at the regime?
         arrest_probability: agent's assessment of arrest probability, given
             rebellion
+
     """
 
     def __init__(
@@ -33,10 +35,19 @@ class Citizen(Agent):
         model,
         pos,
         hardship,
+        legitimacy,
         regime_legitimacy,
         risk_aversion,
+        active_threshold,
         threshold,
         vision,
+        is_employed,
+        moral_state,
+        corruption_transmission_prob = 0.06,
+        honest_transmission_prob = 0.02
+        
+        
+      
     ):
         """
         Create a new Citizen.
@@ -58,15 +69,21 @@ class Citizen(Agent):
         self.breed = "citizen"
         self.pos = pos
         self.hardship = hardship
+        self.legitimacy=legitimacy
         self.regime_legitimacy = regime_legitimacy
         self.risk_aversion = risk_aversion
+        self.active_threshold = active_threshold
         self.threshold = threshold
         self.condition = "Quiescent"
         self.vision = vision
         self.jail_sentence = 0
         self.grievance = self.hardship * (1 - self.regime_legitimacy)
         self.arrest_probability = None
-
+        self.is_employed = is_employed
+        self.moral_state = moral_state
+        self.corruption_transmission_prob = corruption_transmission_prob
+        self.honest_transmission_prob = corruption_transmission_prob
+        
     def step(self):
         """
         Decide whether to activate, then move if applicable.
@@ -76,20 +93,71 @@ class Citizen(Agent):
             return  # no other changes or movements if agent is in jail.
         self.update_neighbors()
         self.update_estimated_arrest_probability()
+        #update regime legitimacy based on corruption observed in nehborhood (see definition below)
+        self.update_estimated_regime_legitimacy()
+        #update employment status each round (see definition below)
+        self.update_employment_status()
+        #update hardships, grievance and threshold (see definition below)
+        #self.update_hardship_grievance_threshold()
         net_risk = self.risk_aversion * self.arrest_probability
+        w_unemployment = self.random.uniform(0.03,0.43)
+        w_corruption = self.random.uniform(0.01,0.03)
+        total_contribution = (w_unemployment * self.model.get_unemployed_saturation(self.model,True)) + (w_corruption * self.model.get_corrupted_saturation(self.model,True)) 
         if (
             self.condition == "Quiescent"
-            and (self.grievance - net_risk) > self.threshold
+            and (self.grievance - net_risk) > self.threshold - total_contribution  #- self.random.uniform(0.01,0.3)*(self.model.get_unemployed_saturation(self.model,False) + self.model.get_corrupted_saturation(self.model,False))
         ):
             self.condition = "Active"
         elif (
-            self.condition == "Active" and (self.grievance - net_risk) <= self.threshold
+            self.condition == "Active" and (self.grievance - net_risk) <= self.threshold - total_contribution
         ):
             self.condition = "Quiescent"
+            
         if self.model.movement and self.empty_neighbors:
             new_pos = self.random.choice(self.empty_neighbors)
             self.model.grid.move_agent(self, new_pos)
+        #agent has to be quiescent to become susceptible; it wouldn't make sense that a rebel becomes corrupt
+        susceptible_neighbors = [a for a in self.neighbors if a.breed == "citizen" 
+                                                     and a.moral_state =="Susceptible" and a.condition == "Quiescent"]
+        employed_non_corrupted = [a for a in self.neighbors if a.breed == "citizen" 
+                                                     and a.moral_state !="Corrupted" and a.is_employed == 1 ]
+        
+         
+         
+        #code by Nadir, i just changed the corruption spreading probabilites, so it spreads in a more realistic way
+        if self.breed == "citizen" and self.moral_state == "Corrupted":
+            if len(self.neighbors) > 1:
+                  if self.moral_state == "Corrupted":        
+                            ## only spread corruption if the current corruption saturation < max_corruption_saturation. 
+                                    if len(susceptible_neighbors) > 0:
 
+                                        corr_prob = self.corruption_transmission_prob *self.random.uniform(0.001,0.1)
+                                        target_neighbor = self.random.choice(susceptible_neighbors) 
+                                        if target_neighbor.is_employed == 1 and self.random.random() < corr_prob or target_neighbor.is_employed == 0 and self.random.random() < corr_prob + 0.07:
+                                            
+                                                  if self.model.get_corrupted_saturation(self.model,False) < self.model.max_corruption_saturation:
+                                                      target_neighbor.moral_state = "Corrupted"
+                                                  if len(employed_non_corrupted) > 0 and self.random.random() < 0.06 and target_neighbor.is_employed == 0:
+                                                        victim_neighbor = self.random.choice(employed_non_corrupted) 
+                                                        victim_neighbor.is_employed = 0
+                                                        target_neighbor.is_employed = 1
+        if self.breed == "citizen" and self.moral_state == "Honest":
+            
+            if len(self.neighbors) > 1:
+                            
+                            if len(susceptible_neighbors) > 0:
+                                target_neighbor = self.random.choice(susceptible_neighbors)
+                                honest_prob = self.honest_transmission_prob *self.random.uniform(0.01,0.1)
+                                if  self.random.random() < honest_prob and self.model.get_honest_saturation(self.model,False) < self.model.max_honest_saturation:
+                                          target_neighbor.moral_state = "Honest"
+                                          
+        ### randomly assign/take agents job                                   
+        if self.breed == "citizen" and self.is_employed == 1 and self.model.get_unemployed_saturation(self.model,False) < self.model.max_unemployed_saturation: 
+            if self.random.random() < self.random.uniform(0.0,0.09) * self.model.get_corrupted_saturation(self.model,False):
+                self.is_employed = 0
+        elif self.breed == "citizen" and self.is_employed == 0: 
+            if self.random.random() < self.random.uniform(0.0,0.009) * self.model.get_honest_saturation(self.model,False):
+                self.is_employed = 1
     def update_neighbors(self):
         """
         Look around and see who my neighbors are
@@ -98,6 +166,7 @@ class Citizen(Agent):
             self.pos, moore=False, radius=1
         )
         self.neighbors = self.model.grid.get_cell_list_contents(self.neighborhood)
+      
         self.empty_neighbors = [
             c for c in self.neighborhood if self.model.grid.is_cell_empty(c)
         ]
@@ -106,6 +175,7 @@ class Citizen(Agent):
         """
         Based on the ratio of cops to actives in my neighborhood, estimate the
         p(Arrest | I go active).
+
         """
         cops_in_vision = len([c for c in self.neighbors if c.breed == "cop"])
         actives_in_vision = 1.0  # citizen counts herself
@@ -120,11 +190,66 @@ class Citizen(Agent):
             -1 * self.model.arrest_prob_constant * (cops_in_vision / actives_in_vision)
         )
 
+    def update_estimated_regime_legitimacy(self):
+        """
+        Based on the nr of corrupts in vision, update self.regime.legitimacy.
 
+        """
+        corrupts_in_vision = len([c for c in self.neighbors if c.breed == "citizen" and c.moral_state=="Corrupted"])
+        others_in_vision = len([c for c in self.neighbors if c.breed == "citizen" and c.moral_state!="Corrupted"])
+         
+        if (
+            self.moral_state!="Corrupted"
+            and self.jail_sentence == 0
+        ):
+            
+            corruption_saturation = self.model.get_corrupted_saturation(self.model, exclude_jailed=True)
+            self.regime_legitimacy = self.legitimacy -(corrupts_in_vision / (1+others_in_vision))
+            unemployment_sat = self.model.get_unemployed_saturation(self.model, exclude_jailed=True) 
+            weight = self.random.uniform(0.3,0.4)* (unemployment_sat+ corruption_saturation)
+            
+            self.regime_legitimacy = self.legitimacy - weight  
+          #  print('*******')
+          #  net_risk = (self.risk_aversion * self.arrest_probability)
+           # print('regime_legitimacy %f'%self.regime_legitimacy)
+           # print('net risk %f'%(self.risk_aversion * self.arrest_probability))
+           # print('self.grievance %f'%self.grievance )
+           # print('condition %f'%(self.grievance - net_risk))
+           # print('Threshold %f'%(self.threshold))
+
+
+    def update_employment_status(self):
+        """
+        Based on the agent's activity, if they become rebels or get jailed they lose their jobs.
+
+        """             
+        
+        if(
+            self.is_employed==1
+            and self.condition=="Active"
+            or self.jail_sentence > 0
+        ):
+            self.is_employed=1
+            
+                      
+    def update_hardship_grievance_threshold(self):
+        """
+        If agent becomes unemployed hardship, thershold and grievance get updated.
+
+        """             
+        
+        if(
+            self.is_employed==0
+        ):
+            self.hardship=self.random.random()-(self.is_employed*self.random.uniform(0.05,0.15))
+            self.grievance = self.hardship * (1 - self.regime_legitimacy)
+            threshold=self.active_threshold+(self.is_employed*self.random.uniform(0.05,0.15))
+    
 class Cop(Agent):
     """
     A cop for life.  No defection.
     Summary of rule: Inspect local vision and arrest a random active agent.
+
     Attributes:
         unique_id: unique int
         x, y: Grid coordinates
@@ -165,6 +290,7 @@ class Cop(Agent):
             arrestee = self.random.choice(active_neighbors)
             sentence = self.random.randint(0, self.model.max_jail_term)
             arrestee.jail_sentence = sentence
+            arrestee.condition = "Queit"
         if self.model.movement and self.empty_neighbors:
             new_pos = self.random.choice(self.empty_neighbors)
             self.model.grid.move_agent(self, new_pos)
