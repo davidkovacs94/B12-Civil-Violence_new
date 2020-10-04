@@ -187,7 +187,7 @@ class EpsteinCivilViolence(Model):
     @staticmethod
     def get_unemployed_saturation(model, exclude_jailed=False):
         """
-        Helper method to count agents by Quiescent/Active.
+        Helper method to count unemployed agents.
         """
         unempl_count = 0
         total_count = 0
@@ -205,7 +205,7 @@ class EpsteinCivilViolence(Model):
     @staticmethod
     def get_corrupted_saturation(model, exclude_jailed=False):
         """
-        Helper method to count agents by Quiescent/Active.
+        Helper method to count corrupted agents.
         """
         corr_count = 0
         total_count = 0
@@ -221,7 +221,7 @@ class EpsteinCivilViolence(Model):
     @staticmethod
     def get_honest_saturation(model, exclude_jailed=False):
         """
-        Helper method to count agents by Quiescent/Active.
+        Helper method to count honest agents.
         """
         honest_count = 0
         total_count = 0
@@ -237,7 +237,7 @@ class EpsteinCivilViolence(Model):
     @staticmethod
     def count_moral_type_citizens(model, moral_condition, exclude_jailed=False):
         """
-        Helper method to count agents by Quiescent/Active.
+        Helper method to count agents by all moral conditions.
         """
         count = 0
         for agent in model.schedule.agents:

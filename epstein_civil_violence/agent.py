@@ -97,11 +97,13 @@ class Citizen(Agent):
         self.update_estimated_regime_legitimacy()
         #update employment status each round (see definition below)
         self.update_employment_status()
-        #update hardships, grievance and threshold (see definition below)
-        #self.update_hardship_grievance_threshold()
+        #update net risk
         net_risk = self.risk_aversion * self.arrest_probability
+        ## random weight to determine unemployment contribution in revolt threshold
         w_unemployment = self.random.uniform(0.03,0.43)
+        ## random weight to determine corruption contribution in revolt threshold
         w_corruption = self.random.uniform(0.01,0.03)
+        ## computing total contribution unemployment + corruption
         total_contribution = (w_unemployment * self.model.get_unemployed_saturation(self.model,True)) + (w_corruption * self.model.get_corrupted_saturation(self.model,True)) 
         if (
             self.condition == "Quiescent"
@@ -117,30 +119,37 @@ class Citizen(Agent):
             new_pos = self.random.choice(self.empty_neighbors)
             self.model.grid.move_agent(self, new_pos)
         #agent has to be quiescent to become susceptible; it wouldn't make sense that a rebel becomes corrupt
+        ## getting susceptible neighbors
         susceptible_neighbors = [a for a in self.neighbors if a.breed == "citizen" 
                                                      and a.moral_state =="Susceptible" and a.condition == "Quiescent"]
+        ## getting employed neighbors
         employed_non_corrupted = [a for a in self.neighbors if a.breed == "citizen" 
                                                      and a.moral_state !="Corrupted" and a.is_employed == 1 ]
         
          
          
-        #code by Nadir, i just changed the corruption spreading probabilites, so it spreads in a more realistic way
+        ## a corrupted agent can corrupt another Susceptible agent 
         if self.breed == "citizen" and self.moral_state == "Corrupted":
+            ## checks if the agent has any neighbors
             if len(self.neighbors) > 1:
                   if self.moral_state == "Corrupted":        
                             ## only spread corruption if the current corruption saturation < max_corruption_saturation. 
                                     if len(susceptible_neighbors) > 0:
-
+                                        ## randomly scales the corruption transmission probability
                                         corr_prob = self.corruption_transmission_prob *self.random.uniform(0.001,0.1)
-                                        target_neighbor = self.random.choice(susceptible_neighbors) 
+                                        ## pick a target susceptible neighbor
+                                        target_neighbor = self.random.choice(susceptible_neighbors)
+                                        ## an unemployed agent is easier to be corrupted than an employed agent
                                         if target_neighbor.is_employed == 1 and self.random.random() < corr_prob or target_neighbor.is_employed == 0 and self.random.random() < corr_prob + 0.07:
-                                            
+                                            # ensures the percentage of corrupted is less than the maximum allowed
                                                   if self.model.get_corrupted_saturation(self.model,False) < self.model.max_corruption_saturation:
                                                       target_neighbor.moral_state = "Corrupted"
+                                                  # assign a job to the newly corrupted agent & take a job from another non corrupted agent
                                                   if len(employed_non_corrupted) > 0 and self.random.random() < 0.06 and target_neighbor.is_employed == 0:
                                                         victim_neighbor = self.random.choice(employed_non_corrupted) 
                                                         victim_neighbor.is_employed = 0
                                                         target_neighbor.is_employed = 1
+        ## Honest agent can turn another Susceptible agent to honest 
         if self.breed == "citizen" and self.moral_state == "Honest":
             
             if len(self.neighbors) > 1:
@@ -151,13 +160,14 @@ class Citizen(Agent):
                                 if  self.random.random() < honest_prob and self.model.get_honest_saturation(self.model,False) < self.model.max_honest_saturation:
                                           target_neighbor.moral_state = "Honest"
                                           
-        ### randomly assign/take agents job                                   
+         ### randomly assign/take agents job. Adding randomness element to the employment/unemployment numbers. Each agent can earn or lose a job at each step.                                  
         if self.breed == "citizen" and self.is_employed == 1 and self.model.get_unemployed_saturation(self.model,False) < self.model.max_unemployed_saturation: 
             if self.random.random() < self.random.uniform(0.0,0.09) * self.model.get_corrupted_saturation(self.model,False):
                 self.is_employed = 0
         elif self.breed == "citizen" and self.is_employed == 0: 
             if self.random.random() < self.random.uniform(0.0,0.009) * self.model.get_honest_saturation(self.model,False):
                 self.is_employed = 1
+                
     def update_neighbors(self):
         """
         Look around and see who my neighbors are
@@ -229,7 +239,7 @@ class Citizen(Agent):
             and self.condition=="Active"
             or self.jail_sentence > 0
         ):
-            self.is_employed=1
+            self.is_employed=0
             
                       
     def update_hardship_grievance_threshold(self):
