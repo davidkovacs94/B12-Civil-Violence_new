@@ -44,7 +44,8 @@ class Citizen(Agent):
         is_employed,
         moral_state,
         corruption_transmission_prob = 0.06,
-        honest_transmission_prob = 0.02
+        honest_transmission_prob = 0.02,
+        max_unemployed_saturation = 0.45
         
         
       
@@ -83,6 +84,7 @@ class Citizen(Agent):
         self.moral_state = moral_state
         self.corruption_transmission_prob = corruption_transmission_prob
         self.honest_transmission_prob = corruption_transmission_prob
+        self.max_unemployed_saturation = max_unemployed_saturation
         
     def step(self):
         """
@@ -96,7 +98,7 @@ class Citizen(Agent):
         #update regime legitimacy based on corruption observed in nehborhood (see definition below)
         self.update_estimated_regime_legitimacy()
         #update employment status each round (see definition below)
-        self.update_employment_status()
+        #self.update_employment_status()
         #update net risk
         net_risk = self.risk_aversion * self.arrest_probability
         ## random weight to determine unemployment contribution in revolt threshold
@@ -232,12 +234,12 @@ class Citizen(Agent):
         """
         Based on the agent's activity, if they become rebels or get jailed they lose their jobs.
 
-        """             
-        
+        """
+        unemployment_sat = self.model.get_unemployed_saturation(self.model, exclude_jailed=True)
+                
         if(
-            self.is_employed==1
-            and self.condition=="Active"
-            or self.jail_sentence > 0
+            unemployment_sat < self.max_unemployed_saturation
+            and self.is_employed==1 and self.condition=="Active" or self.jail_sentence > 0
         ):
             self.is_employed=0
             
