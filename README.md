@@ -13,7 +13,7 @@ To run the model in jupyter notebook, open ``EpsteinCivilViolence.ipynb`` from t
 ```
     EpsteinCivilViolence.ipynb
 ``` 
-To run the model in python import the necessary functions from the civil violence directory, then add model parameters and run the model. e.g.
+To run the model in python :
 
 ```
     $ python run.py    
