@@ -13,26 +13,8 @@ To run the model in jupyter notebook, open ``EpsteinCivilViolence.ipynb`` from t
 ```
     EpsteinCivilViolence.ipynb
 ``` 
-To run the model in python import the necessary functions from the civil violence directory, then add model parameters and run the model. e.g.
+To run the model in python :
 
 ```
-    $ python from epstein_civil_violence.agent import Citizen, Cop
-    $ python from epstein_civil_violence.model import EpsteinCivilViolence
-    $ python model = EpsteinCivilViolence(height=50, 
-                           width=50, 
-                           citizen_density=.7, 
-                           cop_density=.044, 
-                           citizen_vision=7, 
-                           cop_vision=7, 
-                           legitimacy=.8, 
-                           max_jail_term=4, 
-                           initial_unemployment_rate = 0.05,
-                           corruption_level = 0.20,
-                           honest_level = 0.05,
-                           corruption_transmission_prob = 0.001,
-                           honest_transmission_prob = 0.0001,
-                           max_corruption_saturation = 0.34,
-                           max_honest_saturation = 0.14,
-    $ python model.run_model()
-    
+    $ python run.py    
 ``` 
