@@ -18,3 +18,4 @@ To run the model in python :
 ```
     $ python run.py    
 ``` 
+The required packages for running the model can be found in the requirements.txt 
