@@ -13,9 +13,29 @@ To run the model in jupyter notebook, open ``EpsteinCivilViolence.ipynb`` from t
 ```
     EpsteinCivilViolence.ipynb
 ``` 
-To run the model in python :
+To run the model in python, open "run.py" from this directory:
 
 ```
     $ python run.py    
 ``` 
+
+If the above described method results in an error message the following code can be tried:
+
+```
+    $ exec(open("run.py").read())    
+``` 
+
+For visualization run the following code in python from this directory (depending on the terminal used an error message might appear due to a failure to launch the mesa server; the code has been tried and works if ran in the Spyder IDE):
+
+```
+    $ python Visualization.py    
+``` 
+
+If it results in an error message try the following (if this method fails as well, try copying the contents of the "Visualization.py" file into an IPYNB notebook document in Jupyter Notebook and run from there):
+
+```
+    $ exec(open("Visualization.py").read())   
+``` 
+
+
 The required packages for running the model can be found in the requirements.txt 
