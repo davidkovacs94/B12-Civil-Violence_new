@@ -25,7 +25,7 @@ If the above described method results in an error message the following code can
     $ exec(open("run.py").read())    
 ``` 
 
-For visualization run the following code in python from this directory (depending on the terminal used an error message might appear due to a failure to launch the mesa server; the code has been tried and works if ran in the Spyder IDE):
+For visualization run the following code in python from this directory (depending on the terminal used an error message might appear due to a failure to launch the mesa server; the code has been tried and works if ran from the console of the Spyder IDE):
 
 ```
     $ python Visualization.py    
