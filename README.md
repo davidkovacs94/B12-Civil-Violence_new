@@ -40,11 +40,17 @@ If it results in an error message try the following (if this method fails as wel
 Color guide for the interactive visualization:
 
 Quescient + Employed + Non-corrupted agents: BLUE
+
 Quescient + Employed + Corrupted agents: BROWN
+
 Quescient + Unemployed + Non-corrupted agents: GREEN
+
 Quescient + Unemployed + Corrupted agents: YELLOW
+
 Active agents: RED
+
 Jailed agents: Grey
+
 Cops: BLACK
 
 The required packages for running the model can be found in the requirements.txt 
