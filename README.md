@@ -25,7 +25,7 @@ If the above described method results in an error message the following code can
     $ exec(open("run.py").read())    
 ``` 
 
-For visualization run the following code in python from this directory (depending on the terminal used an error message might appear due to a failure to launch the mesa server; the code has been tried and works if ran from the console of the Spyder IDE):
+For interactive visualization run the following code in python from this directory (depending on the terminal used an error message might appear due to a failure to launch the mesa server; the code has been tried and works if ran from the console of the Spyder IDE):
 
 ```
     $ python Visualization.py    
@@ -37,5 +37,14 @@ If it results in an error message try the following (if this method fails as wel
     $ exec(open("Visualization.py").read())   
 ``` 
 
+Color guide for the interactive visualization:
+
+Quescient + Employed + Non-corrupted agents: BLUE
+Quescient + Employed + Corrupted agents: BROWN
+Quescient + Unemployed + Non-corrupted agents: GREEN
+Quescient + Unemployed + Corrupted agents: YELLOW
+Active agents: RED
+Jailed agents: Grey
+Cops: BLACK
 
 The required packages for running the model can be found in the requirements.txt 
