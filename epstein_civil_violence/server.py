@@ -1,4 +1,5 @@
 from mesa.visualization.ModularVisualization import ModularServer
+from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import CanvasGrid
 
 from .model import EpsteinCivilViolence
@@ -58,7 +59,16 @@ model_params = dict(
     citizen_vision=7,
     cop_vision=7,
     legitimacy=0.8,
-    max_jail_term=1000,
+        
+    max_jail_term=UserSettableParameter(
+        "slider",
+        "max_jail_term",
+        1000,
+        0,
+        2500,
+        100,
+        description="maximal jail term",
+    ),
 )
 
 canvas_element = CanvasGrid(citizen_cop_portrayal, 40, 40, 480, 480)
