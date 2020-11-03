@@ -9,7 +9,7 @@ COP_COLOR = "#000000"
 AGENT_QUIET_EMPLOYED_NOT_CORRUPT_COLOR = "#0066CC"
 AGENT_QUIET_EMPLOYED_CORRUPT_COLOR = "#CC6600"
 AGENT_QUIET_UNEMPLOYED_NOT_CORRUPT_COLOR = "#00CC14"
-AGENT_QUIET_UNEMPLOYED_CORRUPT_COLOR = "#F2FF00" 
+AGENT_QUIET_UNEMPLOYED_CORRUPT_COLOR = "#F2FF00"
 AGENT_REBEL_COLOR = "#CC0000"
 JAIL_COLOR = "#757575"
 
@@ -27,13 +27,17 @@ def citizen_cop_portrayal(agent):
 
     if type(agent) is Citizen:
         if (agent.is_employed == 1 and agent.moral_state != "Corrupted"):
-            color = (AGENT_QUIET_EMPLOYED_NOT_CORRUPT_COLOR if agent.condition == "Quiescent" else AGENT_REBEL_COLOR)
+            color = (AGENT_QUIET_EMPLOYED_NOT_CORRUPT_COLOR if
+                     agent.condition == "Quiescent" else AGENT_REBEL_COLOR)
         elif (agent.is_employed == 1 and agent.moral_state == "Corrupted"):
-            color = (AGENT_QUIET_EMPLOYED_CORRUPT_COLOR if agent.condition == "Quiescent" else AGENT_REBEL_COLOR)
+            color = (AGENT_QUIET_EMPLOYED_CORRUPT_COLOR if
+                     agent.condition == "Quiescent" else AGENT_REBEL_COLOR)
         elif (agent.is_employed == 0 and agent.moral_state != "Corrupted"):
-            color = (AGENT_QUIET_UNEMPLOYED_NOT_CORRUPT_COLOR if agent.condition == "Quiescent" else AGENT_REBEL_COLOR)
+            color = (AGENT_QUIET_UNEMPLOYED_NOT_CORRUPT_COLOR if
+                     agent.condition == "Quiescent" else AGENT_REBEL_COLOR)
         elif (agent.is_employed == 0 and agent.moral_state == "Corrupted"):
-            color = (AGENT_QUIET_UNEMPLOYED_CORRUPT_COLOR if agent.condition == "Quiescent" else AGENT_REBEL_COLOR)    
+            color = (AGENT_QUIET_UNEMPLOYED_CORRUPT_COLOR if
+                     agent.condition == "Quiescent" else AGENT_REBEL_COLOR)
         color = JAIL_COLOR if agent.jail_sentence else color
         portrayal["Color"] = color
         portrayal["r"] = 0.8
@@ -59,5 +63,6 @@ model_params = dict(
 
 canvas_element = CanvasGrid(citizen_cop_portrayal, 40, 40, 480, 480)
 server = ModularServer(
-    EpsteinCivilViolence, [canvas_element], "Epstein Civil Violence", model_params
+    EpsteinCivilViolence, [canvas_element],
+    "Epstein Civil Violence", model_params
 )
