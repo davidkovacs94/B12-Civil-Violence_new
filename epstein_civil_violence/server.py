@@ -59,31 +59,28 @@ model_params = dict(
     citizen_vision=7,
     cop_vision=7,
     legitimacy=0.8,
-        
     corruption_transmission_prob=UserSettableParameter(
         "slider",
         "corruption_transmission_prob",
-        0.05,
+        0.06,
         0,
-        0.1,
+        0.25,
         0.0025,
         description="corruption transmission probability",
-    ),   
-    
+    ),
     corruption_level=UserSettableParameter(
         "slider",
         "corruption_level",
-        0.2,
+        0.1,
         0,
         1,
         0.01,
         description="corruption level",
     ),
-    
     initial_unemployment_rate=UserSettableParameter(
         "slider",
         "initial_unemployment_rate",
-        0.15,
+        0.1,
         0,
         1,
         0.01,
